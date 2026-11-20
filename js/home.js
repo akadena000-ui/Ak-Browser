@@ -1,6 +1,7 @@
 /** Ak New Tab page (srcdoc) — galaxy purple */
 
 export function buildHomeSrcdoc(isPrivate = false) {
+  const privDisplay = isPrivate ? "flex" : "none";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -41,10 +42,7 @@ export function buildHomeSrcdoc(isPrivate = false) {
       radial-gradient(1px 1px at 10% 80%, rgba(255,255,255,0.25), transparent);
     animation: twinkle 8s ease-in-out infinite alternate;
   }
-  @keyframes twinkle {
-    from { opacity: 0.6; }
-    to { opacity: 1; }
-  }
+  @keyframes twinkle { from { opacity: 0.6; } to { opacity: 1; } }
   .clock {
     font-size: 4.2rem; font-weight: 600; letter-spacing: -2px;
     background: linear-gradient(135deg, #f3e8ff, #c026ff);
@@ -114,7 +112,6 @@ export function buildHomeSrcdoc(isPrivate = false) {
     width: 22px; height: 22px;
     filter: brightness(0) invert(0.75);
   }
-  .shortcut-icon i { font-size: 20px; color: var(--muted); }
   .shortcut-label {
     font-size: 11px; color: var(--muted); text-align: center;
     max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -127,13 +124,12 @@ export function buildHomeSrcdoc(isPrivate = false) {
   .brand span { color: var(--purple); }
   .private-badge {
     position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
-    display: none; align-items: center; gap: 8px;
+    display: ${privDisplay}; align-items: center; gap: 8px;
     background: rgba(239, 68, 68, 0.15);
     border: 1px solid rgba(239, 68, 68, 0.35);
     color: #f87171; padding: 8px 18px; border-radius: 999px;
     font-size: 12px; font-weight: 500;
   }
-  .private-badge.show { display: flex; }
 </style>
 </head>
 <body>
@@ -176,4 +172,32 @@ export function buildHomeSrcdoc(isPrivate = false) {
   </div>
   <div class="brand">AK <span>BROWSER</span></div>
   <script>
-    const priv = ${isPrivate ? 
+    function tick() {
+      const now = new Date();
+      document.getElementById("clock").textContent = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      document.getElementById("date").textContent = now.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+    }
+    tick();
+    setInterval(tick, 1000);
+
+    document.getElementById("form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const q = document.getElementById("q").value.trim();
+      if (!q) return;
+      const engine = document.getElementById("engine").value;
+      const url = /^(https?:\/\/|www\.)/i.test(q)
+        ? (q.startsWith("http") ? q : "https://" + q)
+        : engine + encodeURIComponent(q);
+      parent.postMessage({ type: "ak-navigate", url }, "*");
+    });
+
+    document.querySelectorAll(".shortcut").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
+        parent.postMessage({ type: "ak-navigate", url: el.dataset.url }, "*");
+      });
+    });
+  </script>
+</body>
+</html>`;
+}
