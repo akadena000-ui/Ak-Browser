@@ -6,12 +6,20 @@ import {
   isBookmarked,
   getHistory,
   pushHistory,
-  clearHistory,
   clearAllData,
   isBmBarVisible,
   setBmBarVisible,
 } from "./storage.js";
-import { getProxyMode, setProxyMode, resolveUrl } from "./proxy.js";
+import {
+  getProxyMode,
+  setProxyMode,
+  resolveUrl,
+  initScramjet,
+  getWispUrl,
+  setWispUrl,
+  getWispServers,
+  isScramjetReady,
+} from "./proxy.js";
 
 const OWNER_PASSWORD = "aleksistuff231";
 const OWNER_KEY = "ak_owner_unlocked";
@@ -82,7 +90,10 @@ function renderTabs() {
   bar.innerHTML = "";
   tabs.forEach((t) => {
     const el = document.createElement("div");
-    el.className = "tab" + (t.id === activeId ? " active" : "") + (t.isPrivate ? " private" : "");
+    el.className =
+      "tab" +
+      (t.id === activeId ? " active" : "") +
+      (t.isPrivate ? " private" : "");
     el.dataset.id = t.id;
     el.innerHTML = `
       <span class="tab-title">${escapeHtml(t.title)}</span>
@@ -120,7 +131,8 @@ function ensureFrame(tab) {
     frame = document.createElement("iframe");
     frame.className = "viewport";
     frame.id = "frame-" + tab.id;
-    frame.sandbox = "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads";
+    frame.sandbox =
+      "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads";
     frame.referrerPolicy = "no-referrer";
   }
   stack.appendChild(frame);
@@ -134,7 +146,11 @@ function navigate(id, rawUrl, pushHist = true) {
   let url = rawUrl.trim();
   if (!url) url = "ak://home";
 
-  if (!url.startsWith("ak://") && !url.startsWith("about:") && !/^https?:\/\//i.test(url)) {
+  if (
+    !url.startsWith("ak://") &&
+    !url.startsWith("about:") &&
+    !/^https?:\/\//i.test(url)
+  ) {
     if (/^[\w.-]+\.[a-z]{2,}/i.test(url)) {
       url = "https://" + url;
     } else {
@@ -234,7 +250,20 @@ function closePanel() {
   $("#panel").classList.remove("open");
 }
 
-/* ===== Owner Access ===== */
+function fillWispSelect() {
+  const sel = $("#wisp-select");
+  if (!sel) return;
+  sel.innerHTML = "";
+  getWispServers().forEach((s) => {
+    const opt = document.createElement("option");
+    opt.value = s.url;
+    opt.textContent = s.name;
+    if (s.url === getWispUrl()) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+/* Owner */
 function openOwnerModal() {
   $("#owner-error").textContent = "";
   $("#owner-password").value = "";
@@ -247,8 +276,7 @@ function closeOwnerModal() {
 }
 
 function unlockOwner() {
-  const input = $("#owner-password").value;
-  if (input === OWNER_PASSWORD) {
+  if ($("#owner-password").value === OWNER_PASSWORD) {
     ownerUnlocked = true;
     sessionStorage.setItem(OWNER_KEY, "1");
     closeOwnerModal();
@@ -280,7 +308,9 @@ function handleOwnerAction(action) {
       history: getHistory(),
       exportedAt: new Date().toISOString(),
     };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "ak-browser-export.json";
@@ -290,14 +320,12 @@ function handleOwnerAction(action) {
   if (action === "toggle-proxy") {
     setProxyMode("scramjet");
     $("#proxy-select").value = "scramjet";
-    alert("Scramjet mode forced on.");
+    alert("Scramjet mode on · Wisp: " + getWispUrl());
   }
   if (action === "new-private") {
     createTab("ak://home", { isPrivate: true });
   }
-  if (action === "lock") {
-    lockOwner();
-  }
+  if (action === "lock") lockOwner();
 }
 
 // Events
@@ -332,11 +360,8 @@ $("#address-bar").addEventListener("keydown", (e) => {
 $("#btn-star").addEventListener("click", () => {
   const tab = tabs.find((t) => t.id === activeId);
   if (!tab || tab.url.startsWith("ak://")) return;
-  if (isBookmarked(tab.url)) {
-    removeBookmark(tab.url);
-  } else {
-    addBookmark(tab.title, tab.url);
-  }
+  if (isBookmarked(tab.url)) removeBookmark(tab.url);
+  else addBookmark(tab.title, tab.url);
   updateStar(tab.url);
   renderBookmarkBar();
 });
@@ -350,7 +375,9 @@ $("#btn-menu").addEventListener("click", (e) => {
   e.stopPropagation();
   $("#dropdown").classList.toggle("open");
 });
-document.addEventListener("click", () => $("#dropdown").classList.remove("open"));
+document.addEventListener("click", () =>
+  $("#dropdown").classList.remove("open")
+);
 
 $("#dropdown").addEventListener("click", (e) => {
   const item = e.target.closest(".dd-item");
@@ -373,16 +400,12 @@ $("#dropdown").addEventListener("click", (e) => {
     }
   }
   if (action === "owner-access") {
-    if (ownerUnlocked) {
-      $("#owner-panel").classList.add("open");
-    } else {
-      openOwnerModal();
-    }
+    if (ownerUnlocked) $("#owner-panel").classList.add("open");
+    else openOwnerModal();
   }
 });
 
 $("#panel-close").addEventListener("click", closePanel);
-
 $("#owner-cancel").addEventListener("click", closeOwnerModal);
 $("#owner-submit").addEventListener("click", unlockOwner);
 $("#owner-password").addEventListener("keydown", (e) => {
@@ -405,8 +428,14 @@ window.addEventListener("message", (e) => {
 });
 
 // Boot
-renderBookmarkBar();
-createTab();
-if (ownerUnlocked) {
-  // stay locked on panel until they open it again from menu
-}
+(async () => {
+  renderBookmarkBar();
+  createTab();
+  const ok = await initScramjet();
+  const status = $("#proxy-status");
+  if (status) {
+    status.textContent = ok
+      ? "Scramjet · " + getWispUrl().replace(/^wss?:\/\//, "").slice(0, 28)
+      : "Scramjet offline (add /scram files)";
+  }
+})();
