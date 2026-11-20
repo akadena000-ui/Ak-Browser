@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ak Browser</title>
+  <meta name="theme-color" content="#1a0a2e" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/ak-browser.css" />
+</head>
+<body>
+  <div id="app" class="ak-browser">
+    <!-- Top chrome: window controls + tabs -->
+    <header class="chrome-top">
+      <div class="window-controls">
+        <button class="wc close" data-action="close" title="Close"></button>
+        <button class="wc min" data-action="minimize" title="Minimize"></button>
+        <button class="wc max" data-action="maximize" title="Maximize"></button>
+      </div>
+      <div class="tabbar" id="tabbar"></div>
+      <button class="tab-new" id="btn-new-tab" title="New Tab">
+        <i class="fa-solid fa-plus"></i>
+      </button>
+    </header>
+
+    <!-- Navigation row -->
+    <nav class="chrome-nav">
+      <div class="nav-btns">
+        <button class="nav-btn" id="btn-back" title="Back" disabled><i class="fa-solid fa-chevron-left"></i></button>
+        <button class="nav-btn" id="btn-forward" title="Forward" disabled><i class="fa-solid fa-chevron-right"></i></button>
+        <button class="nav-btn" id="btn-reload" title="Reload"><i class="fa-solid fa-rotate-right"></i></button>
+        <button class="nav-btn" id="btn-home" title="Home"><i class="fa-solid fa-house"></i></button>
+      </div>
+
+      <div class="address-wrap">
+        <i class="fa-solid fa-lock address-icon" id="lock-icon" title="Connection"></i>
+        <input type="text" class="address-bar" id="address-bar" placeholder="Search or enter URL" autocomplete="off" spellcheck="false" />
+        <button class="bookmark-star" id="btn-star" title="Bookmark"><i class="fa-regular fa-star"></i></button>
+      </div>
+
+      <div class="nav-right">
+        <select class="proxy-select" id="proxy-select" title="Proxy">
+          <option value="direct">Direct</option>
+          <option value="scramjet">Scramjet</option>
+        </select>
+        <button class="nav-btn" id="btn-menu" title="Menu"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+      </div>
+    </nav>
+
+    <!-- Bookmark bar -->
+    <div class="bookmark-bar" id="bookmark-bar"></div>
+
+    <!-- Content -->
+    <main class="content" id="content">
+      <div class="viewport-stack" id="viewport-stack"></div>
+    </main>
+
+    <!-- Dropdown menu -->
+    <div class="dropdown" id="dropdown">
+      <div class="dd-section">
+        <div class="dd-item" data-action="new-tab"><i class="fa-solid fa-plus"></i> New Tab</div>
+        <div class="dd-item" data-action="new-private"><i class="fa-solid fa-user-secret"></i> New Private Tab</div>
+      </div>
+      <div class="dd-section">
+        <div class="dd-item" data-action="bookmarks"><i class="fa-solid fa-star"></i> Bookmarks</div>
+        <div class="dd-item" data-action="history"><i class="fa-solid fa-clock-rotate-left"></i> History</div>
+        <div class="dd-item" data-action="downloads"><i class="fa-solid fa-download"></i> Downloads</div>
+      </div>
+      <div class="dd-section">
+        <div class="dd-item" data-action="toggle-bmbar"><i class="fa-solid fa-check"></i> Bookmark Bar</div>
+        <div class="dd-item" data-action="clear-data"><i class="fa-solid fa-trash-can"></i> Clear Data</div>
+      </div>
+    </div>
+
+    <!-- Side panel -->
+    <aside class="panel" id="panel">
+      <div class="panel-header">
+        <span class="panel-title" id="panel-title">Panel</span>
+        <button class="panel-close" id="panel-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="panel-body" id="panel-body"></div>
+    </aside>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
