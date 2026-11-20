@@ -1,11 +1,10 @@
 /**
  * Ak Browser — Scramjet proxy layer
- * Same Wisp servers as YukiOS. Epoxy transport + Scramjet controller.
+ * Same Wisp servers as YukiOS.
  *
- * Full proxy needs:
- * 1. Service worker (sw.js) registered
- * 2. Scramjet / baremux / epoxy static files (CDN or /scram/)
- * 3. A Wisp WebSocket endpoint (public list below, same as Yuki)
+ * IMPORTANT: Full Scramjet needs /scram + SW + Wisp.
+ * Until those exist, we FALL BACK TO DIRECT so pages load
+ * instead of Netlify 404 on /scramjet/...
  */
 
 export const DEFAULT_WISP_URL =
@@ -22,7 +21,7 @@ export const WISP_SERVERS = [
 
 const EPOXY_ONLY = [DEFAULT_WISP_URL];
 
-let mode = localStorage.getItem("ak_proxy_mode") || "scramjet";
+let mode = localStorage.getItem("ak_proxy_mode") || "direct";
 let wispUrl = localStorage.getItem("ak_wisp") || DEFAULT_WISP_URL;
 let scramjetReady = false;
 let scramjetController = null;
@@ -33,7 +32,7 @@ export function getProxyMode() {
 }
 
 export function setProxyMode(m) {
-  mode = m === "direct" ? "direct" : "scramjet";
+  mode = m === "scramjet" ? "scramjet" : "direct";
   localStorage.setItem("ak_proxy_mode", mode);
 }
 
@@ -63,7 +62,7 @@ export function isEpoxyOnlyWisp(url) {
 }
 
 export function isProxied() {
-  return mode === "scramjet";
+  return mode === "scramjet" && scramjetReady;
 }
 
 export function isScramjetReady() {
@@ -85,37 +84,22 @@ function loadScript(src) {
   });
 }
 
-/**
- * Boot Scramjet client.
- * Tries local /scram/ paths first (self-host), then CDN fallbacks.
- * Connects BareMux → epoxy/libcurl → public Wisp (Yuki list).
- */
 export async function initScramjet() {
   if (initPromise) return initPromise;
   initPromise = (async () => {
     try {
-      // Prefer same-origin Scramjet assets if you copy them into /scram/
       const localAll = "/scram/scramjet.all.js";
-      const cdnAll =
-        "https://cdn.jsdelivr.net/npm/@mercuryworkshop/scramjet@latest/dist/scramjet.all.js";
-
       let loaded = false;
       try {
         await loadScript(localAll);
         loaded = true;
       } catch {
-        try {
-          await loadScript(cdnAll);
-          loaded = true;
-        } catch (e) {
-          console.warn("[Ak Proxy] Scramjet scripts not available:", e);
-        }
+        console.warn(
+          "[Ak Proxy] No /scram/scramjet.all.js — using DIRECT until you add Scramjet assets."
+        );
       }
 
       if (!loaded || typeof $scramjetLoadController !== "function") {
-        console.warn(
-          "[Ak Proxy] Scramjet controller missing. Using encode fallback. Copy Scramjet dist to /scram/ for full support."
-        );
         scramjetReady = false;
         return false;
       }
@@ -132,20 +116,18 @@ export async function initScramjet() {
       try {
         await scramjetController.init();
       } catch (e) {
-        console.warn("[Ak Proxy] controller.init failed (SW/files?):", e);
+        console.warn("[Ak Proxy] controller.init:", e);
       }
 
-      // Service worker
       if ("serviceWorker" in navigator) {
         try {
           await navigator.serviceWorker.register("/sw.js", { scope: "/" });
           await navigator.serviceWorker.ready;
         } catch (e) {
-          console.warn("[Ak Proxy] SW register failed:", e);
+          console.warn("[Ak Proxy] SW:", e);
         }
       }
 
-      // BareMux + transport (epoxy preferred for Yuki primary Wisp)
       try {
         if (window.BareMux?.BareMuxConnection) {
           const connection = new BareMux.BareMuxConnection(
@@ -157,7 +139,7 @@ export async function initScramjet() {
           await connection.setTransport(transportPath, [{ wisp: wispUrl }]);
         }
       } catch (e) {
-        console.warn("[Ak Proxy] BareMux/transport setup skipped:", e);
+        console.warn("[Ak Proxy] transport:", e);
       }
 
       scramjetReady = true;
@@ -166,7 +148,7 @@ export async function initScramjet() {
         controller: scramjetController,
         wisp: wispUrl,
       };
-      console.log("[Ak Proxy] Scramjet ready · Wisp:", wispUrl);
+      console.log("[Ak Proxy] Scramjet READY ·", wispUrl);
       return true;
     } catch (e) {
       console.error("[Ak Proxy] init failed:", e);
@@ -183,22 +165,23 @@ function encodeViaController(url) {
       return scramjetController.encodeUrl(url);
     }
     if (scramjetController?.prefix) {
-      return (
-        scramjetController.prefix +
-        encodeURIComponent(url)
-      );
+      return scramjetController.prefix + encodeURIComponent(url);
     }
   } catch {}
-  // Fallback path-style encode used by many Scramjet setups
   return "/scramjet/" + encodeURIComponent(url);
 }
 
 /**
- * Resolve navigation URL for an iframe src.
+ * Only rewrite through Scramjet when fully ready.
+ * Otherwise return the real URL so the iframe loads (no Netlify 404).
  */
 export function resolveUrl(url) {
   if (!url || url.startsWith("ak://") || url.startsWith("about:")) return url;
-  if (mode !== "scramjet") return url;
+
+  // Not in scramjet mode, or assets missing → direct load
+  if (mode !== "scramjet" || !scramjetReady) {
+    return url;
+  }
 
   try {
     if (window.__scramjet?.encodeUrl) {

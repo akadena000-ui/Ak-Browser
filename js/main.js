@@ -16,8 +16,6 @@ import {
   resolveUrl,
   initScramjet,
   getWispUrl,
-  setWispUrl,
-  getWispServers,
   isScramjetReady,
 } from "./proxy.js";
 
@@ -64,8 +62,7 @@ function closeTab(id) {
     return;
   }
   if (activeId === id) {
-    const next = tabs[Math.min(idx, tabs.length - 1)];
-    switchTab(next.id);
+    switchTab(tabs[Math.min(idx, tabs.length - 1)].id);
   } else {
     renderTabs();
   }
@@ -94,7 +91,6 @@ function renderTabs() {
       "tab" +
       (t.id === activeId ? " active" : "") +
       (t.isPrivate ? " private" : "");
-    el.dataset.id = t.id;
     el.innerHTML = `
       <span class="tab-title">${escapeHtml(t.title)}</span>
       <span class="tab-close" data-close="${t.id}"><i class="fa-solid fa-xmark"></i></span>
@@ -131,8 +127,10 @@ function ensureFrame(tab) {
     frame = document.createElement("iframe");
     frame.className = "viewport";
     frame.id = "frame-" + tab.id;
+    // Many sites block iframe embedding (X-Frame-Options).
+    // Direct mode will hit that; Scramjet rewrites avoid it when fully set up.
     frame.sandbox =
-      "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads";
+      "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-top-navigation-by-user-activation";
     frame.referrerPolicy = "no-referrer";
   }
   stack.appendChild(frame);
@@ -151,11 +149,8 @@ function navigate(id, rawUrl, pushHist = true) {
     !url.startsWith("about:") &&
     !/^https?:\/\//i.test(url)
   ) {
-    if (/^[\w.-]+\.[a-z]{2,}/i.test(url)) {
-      url = "https://" + url;
-    } else {
-      url = "https://search.brave.com/search?q=" + encodeURIComponent(url);
-    }
+    if (/^[\w.-]+\.[a-z]{2,}/i.test(url)) url = "https://" + url;
+    else url = "https://search.brave.com/search?q=" + encodeURIComponent(url);
   }
 
   tab.url = url;
@@ -167,7 +162,6 @@ function navigate(id, rawUrl, pushHist = true) {
 
   let frame = document.getElementById("frame-" + id);
   if (frame) frame.remove();
-
   frame = ensureFrame(tab);
 
   if (url.startsWith("ak://")) {
@@ -178,6 +172,16 @@ function navigate(id, rawUrl, pushHist = true) {
     frame.src = target;
     tab.title = url.replace(/^https?:\/\//, "").split("/")[0] || "Tab";
     if (!tab.isPrivate) pushHistory(tab.title, url);
+
+    // If direct + site blocks iframes, show a soft notice after load fail
+    frame.addEventListener("load", () => {
+      try {
+        // cross-origin will throw — that's normal for direct embeds
+        void frame.contentDocument;
+      } catch {
+        /* blocked or cross-origin — expected */
+      }
+    });
   }
 
   if (id === activeId) {
@@ -187,6 +191,7 @@ function navigate(id, rawUrl, pushHist = true) {
   }
   renderTabs();
   frame.classList.add("active");
+  updateProxyBadge();
 }
 
 function updateNavButtons(tab) {
@@ -201,6 +206,21 @@ function updateStar(url) {
   btn.innerHTML = on
     ? '<i class="fa-solid fa-star"></i>'
     : '<i class="fa-regular fa-star"></i>';
+}
+
+function updateProxyBadge() {
+  const badge = $("#proxy-badge");
+  if (!badge) return;
+  if (isScramjetReady() && getProxyMode() === "scramjet") {
+    badge.textContent = "Scramjet";
+    badge.className = "proxy-badge on";
+  } else if (getProxyMode() === "scramjet") {
+    badge.textContent = "Scramjet (not ready)";
+    badge.className = "proxy-badge warn";
+  } else {
+    badge.textContent = "Direct";
+    badge.className = "proxy-badge";
+  }
 }
 
 function renderBookmarkBar() {
@@ -250,20 +270,6 @@ function closePanel() {
   $("#panel").classList.remove("open");
 }
 
-function fillWispSelect() {
-  const sel = $("#wisp-select");
-  if (!sel) return;
-  sel.innerHTML = "";
-  getWispServers().forEach((s) => {
-    const opt = document.createElement("option");
-    opt.value = s.url;
-    opt.textContent = s.name;
-    if (s.url === getWispUrl()) opt.selected = true;
-    sel.appendChild(opt);
-  });
-}
-
-/* Owner */
 function openOwnerModal() {
   $("#owner-error").textContent = "";
   $("#owner-password").value = "";
@@ -320,15 +326,17 @@ function handleOwnerAction(action) {
   if (action === "toggle-proxy") {
     setProxyMode("scramjet");
     $("#proxy-select").value = "scramjet";
-    alert("Scramjet mode on · Wisp: " + getWispUrl());
+    updateProxyBadge();
+    alert(
+      isScramjetReady()
+        ? "Scramjet ON · " + getWispUrl()
+        : "Scramjet selected, but assets not installed yet. Pages will load Direct until you add /scram files. See SCRAMJET.md"
+    );
   }
-  if (action === "new-private") {
-    createTab("ak://home", { isPrivate: true });
-  }
+  if (action === "new-private") createTab("ak://home", { isPrivate: true });
   if (action === "lock") lockOwner();
 }
 
-// Events
 $("#btn-new-tab").addEventListener("click", () => createTab());
 $("#btn-back").addEventListener("click", () => {
   const tab = tabs.find((t) => t.id === activeId);
@@ -369,6 +377,7 @@ $("#btn-star").addEventListener("click", () => {
 $("#proxy-select").value = getProxyMode();
 $("#proxy-select").addEventListener("change", (e) => {
   setProxyMode(e.target.value);
+  updateProxyBadge();
 });
 
 $("#btn-menu").addEventListener("click", (e) => {
@@ -427,15 +436,9 @@ window.addEventListener("message", (e) => {
   }
 });
 
-// Boot
 (async () => {
   renderBookmarkBar();
   createTab();
-  const ok = await initScramjet();
-  const status = $("#proxy-status");
-  if (status) {
-    status.textContent = ok
-      ? "Scramjet · " + getWispUrl().replace(/^wss?:\/\//, "").slice(0, 28)
-      : "Scramjet offline (add /scram files)";
-  }
+  await initScramjet();
+  updateProxyBadge();
 })();

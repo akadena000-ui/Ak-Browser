@@ -12,12 +12,11 @@
 </head>
 <body>
   <div id="app" class="ak-browser">
-    <!-- Top chrome: window controls + tabs -->
     <header class="chrome-top">
       <div class="window-controls">
-        <button class="wc close" data-action="close" title="Close"></button>
-        <button class="wc min" data-action="minimize" title="Minimize"></button>
-        <button class="wc max" data-action="maximize" title="Maximize"></button>
+        <button class="wc close" title="Close"></button>
+        <button class="wc min" title="Minimize"></button>
+        <button class="wc max" title="Maximize"></button>
       </div>
       <div class="tabbar" id="tabbar"></div>
       <button class="tab-new" id="btn-new-tab" title="New Tab">
@@ -25,7 +24,6 @@
       </button>
     </header>
 
-    <!-- Navigation row -->
     <nav class="chrome-nav">
       <div class="nav-btns">
         <button class="nav-btn" id="btn-back" title="Back" disabled><i class="fa-solid fa-chevron-left"></i></button>
@@ -35,12 +33,13 @@
       </div>
 
       <div class="address-wrap">
-        <i class="fa-solid fa-lock address-icon" id="lock-icon" title="Connection"></i>
+        <i class="fa-solid fa-lock address-icon"></i>
         <input type="text" class="address-bar" id="address-bar" placeholder="Search or enter URL" autocomplete="off" spellcheck="false" />
         <button class="bookmark-star" id="btn-star" title="Bookmark"><i class="fa-regular fa-star"></i></button>
       </div>
 
       <div class="nav-right">
+        <span class="proxy-badge" id="proxy-badge">Direct</span>
         <select class="proxy-select" id="proxy-select" title="Proxy">
           <option value="direct">Direct</option>
           <option value="scramjet">Scramjet</option>
@@ -49,15 +48,12 @@
       </div>
     </nav>
 
-    <!-- Bookmark bar -->
     <div class="bookmark-bar" id="bookmark-bar"></div>
 
-    <!-- Content -->
     <main class="content" id="content">
       <div class="viewport-stack" id="viewport-stack"></div>
     </main>
 
-    <!-- Dropdown menu -->
     <div class="dropdown" id="dropdown">
       <div class="dd-section">
         <div class="dd-item" data-action="new-tab"><i class="fa-solid fa-plus"></i> New Tab</div>
@@ -73,13 +69,12 @@
         <div class="dd-item" data-action="clear-data"><i class="fa-solid fa-trash-can"></i> Clear Data</div>
       </div>
       <div class="dd-section">
-        <div class="dd-item owner-item" data-action="owner-access" id="dd-owner">
+        <div class="dd-item owner-item" data-action="owner-access">
           <i class="fa-solid fa-key"></i> Owner Access
         </div>
       </div>
     </div>
 
-    <!-- Owner Access modal -->
     <div class="modal-overlay" id="owner-modal">
       <div class="modal">
         <div class="modal-title"><i class="fa-solid fa-key"></i> Owner Access</div>
@@ -93,7 +88,6 @@
       </div>
     </div>
 
-    <!-- Owner panel (shown after unlock) -->
     <div class="owner-panel" id="owner-panel">
       <div class="owner-panel-header">
         <span><i class="fa-solid fa-shield-halved"></i> Owner Controls</span>
@@ -109,7 +103,6 @@
       </div>
     </div>
 
-    <!-- Side panel -->
     <aside class="panel" id="panel">
       <div class="panel-header">
         <span class="panel-title" id="panel-title">Panel</span>
