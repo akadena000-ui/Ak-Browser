@@ -72,6 +72,41 @@
         <div class="dd-item" data-action="toggle-bmbar"><i class="fa-solid fa-check"></i> Bookmark Bar</div>
         <div class="dd-item" data-action="clear-data"><i class="fa-solid fa-trash-can"></i> Clear Data</div>
       </div>
+      <div class="dd-section">
+        <div class="dd-item owner-item" data-action="owner-access" id="dd-owner">
+          <i class="fa-solid fa-key"></i> Owner Access
+        </div>
+      </div>
+    </div>
+
+    <!-- Owner Access modal -->
+    <div class="modal-overlay" id="owner-modal">
+      <div class="modal">
+        <div class="modal-title"><i class="fa-solid fa-key"></i> Owner Access</div>
+        <p class="modal-desc">Enter the owner password to unlock admin controls.</p>
+        <input type="password" class="modal-input" id="owner-password" placeholder="Password" autocomplete="off" />
+        <div class="modal-error" id="owner-error"></div>
+        <div class="modal-actions">
+          <button class="modal-btn secondary" id="owner-cancel">Cancel</button>
+          <button class="modal-btn primary" id="owner-submit">Unlock</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Owner panel (shown after unlock) -->
+    <div class="owner-panel" id="owner-panel">
+      <div class="owner-panel-header">
+        <span><i class="fa-solid fa-shield-halved"></i> Owner Controls</span>
+        <button class="panel-close" id="owner-panel-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="owner-panel-body">
+        <div class="owner-badge">Unlocked as Aleks</div>
+        <button class="owner-action" data-owner="clear-all">Clear All Browser Data</button>
+        <button class="owner-action" data-owner="export-data">Export Bookmarks + History</button>
+        <button class="owner-action" data-owner="toggle-proxy">Force Scramjet Mode</button>
+        <button class="owner-action" data-owner="new-private">Open Private Tab</button>
+        <button class="owner-action danger" data-owner="lock">Lock Owner Access</button>
+      </div>
     </div>
 
     <!-- Side panel -->

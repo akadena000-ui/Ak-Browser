@@ -327,6 +327,8 @@ html, body {
 }
 .dd-item:hover { background: var(--ak-purple-dim); }
 .dd-item i { width: 18px; text-align: center; color: var(--ak-muted); }
+.dd-item.owner-item i { color: var(--ak-purple); }
+.dd-item.owner-item:hover { background: rgba(192, 38, 255, 0.25); }
 
 /* ----- Side panel ----- */
 .panel {
@@ -370,6 +372,151 @@ html, body {
 }
 .panel-empty {
   padding: 32px 16px; text-align: center; color: var(--ak-muted); font-size: 13px;
+}
+
+/* ----- Owner Access modal ----- */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 2000;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+.modal-overlay.open {
+  opacity: 1; pointer-events: auto;
+}
+.modal {
+  background: var(--ak-elev);
+  border: 1px solid var(--ak-border);
+  border-radius: 18px;
+  padding: 28px;
+  width: 100%; max-width: 360px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.75), var(--ak-glow);
+  animation: modalIn 0.22s ease;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.94) translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.modal-title {
+  font-size: 17px; font-weight: 600; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 10px;
+}
+.modal-title i { color: var(--ak-purple); }
+.modal-desc {
+  font-size: 13px; color: var(--ak-muted); margin-bottom: 18px; line-height: 1.4;
+}
+.modal-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--ak-border);
+  background: var(--ak-surface);
+  color: var(--ak-text);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  margin-bottom: 8px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.modal-input:focus {
+  border-color: var(--ak-purple);
+  box-shadow: 0 0 0 3px var(--ak-purple-dim);
+}
+.modal-error {
+  font-size: 12px; color: #f87171; min-height: 18px; margin-bottom: 12px;
+}
+.modal-actions {
+  display: flex; gap: 10px; justify-content: flex-end;
+}
+.modal-btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.15s, background 0.15s;
+}
+.modal-btn:active { transform: scale(0.97); }
+.modal-btn.primary {
+  background: linear-gradient(135deg, var(--ak-purple), var(--ak-purple-2));
+  color: #fff;
+  box-shadow: var(--ak-glow-sm);
+}
+.modal-btn.primary:hover { box-shadow: var(--ak-glow); }
+.modal-btn.secondary {
+  background: var(--ak-surface);
+  color: var(--ak-text-2);
+  border: 1px solid var(--ak-border);
+}
+.modal-btn.secondary:hover { background: var(--ak-elev-2); }
+
+/* ----- Owner panel ----- */
+.owner-panel {
+  position: fixed;
+  bottom: 20px; right: 20px;
+  width: 300px;
+  background: var(--ak-elev);
+  border: 1px solid var(--ak-border);
+  border-radius: 16px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.7), var(--ak-glow);
+  z-index: 1500;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalIn 0.22s ease;
+}
+.owner-panel.open { display: flex; }
+.owner-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--ak-border);
+  font-weight: 600; font-size: 14px;
+}
+.owner-panel-header i { color: var(--ak-purple); margin-right: 8px; }
+.owner-panel-body {
+  padding: 14px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.owner-badge {
+  font-size: 12px;
+  color: var(--ak-purple);
+  background: var(--ak-purple-dim);
+  border: 1px solid var(--ak-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  text-align: center;
+  margin-bottom: 4px;
+}
+.owner-action {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--ak-border);
+  background: var(--ak-surface);
+  color: var(--ak-text);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.owner-action:hover {
+  background: var(--ak-purple-dim);
+  border-color: var(--ak-purple);
+  box-shadow: var(--ak-glow-sm);
+}
+.owner-action.danger {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.35);
+}
+.owner-action.danger:hover {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: #f87171;
 }
 
 /* Scrollbars */

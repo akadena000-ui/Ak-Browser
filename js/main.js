@@ -13,12 +13,16 @@ import {
 } from "./storage.js";
 import { getProxyMode, setProxyMode, resolveUrl } from "./proxy.js";
 
+const OWNER_PASSWORD = "aleksistuff231";
+const OWNER_KEY = "ak_owner_unlocked";
+
 const $ = (sel, el = document) => el.querySelector(sel);
 const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 
 let tabs = [];
 let activeId = null;
 let idCounter = 0;
+let ownerUnlocked = sessionStorage.getItem(OWNER_KEY) === "1";
 
 function uid() {
   return "t" + ++idCounter + "_" + Date.now().toString(36);
@@ -230,6 +234,72 @@ function closePanel() {
   $("#panel").classList.remove("open");
 }
 
+/* ===== Owner Access ===== */
+function openOwnerModal() {
+  $("#owner-error").textContent = "";
+  $("#owner-password").value = "";
+  $("#owner-modal").classList.add("open");
+  setTimeout(() => $("#owner-password").focus(), 50);
+}
+
+function closeOwnerModal() {
+  $("#owner-modal").classList.remove("open");
+}
+
+function unlockOwner() {
+  const input = $("#owner-password").value;
+  if (input === OWNER_PASSWORD) {
+    ownerUnlocked = true;
+    sessionStorage.setItem(OWNER_KEY, "1");
+    closeOwnerModal();
+    $("#owner-panel").classList.add("open");
+  } else {
+    $("#owner-error").textContent = "Wrong password";
+    $("#owner-password").value = "";
+    $("#owner-password").focus();
+  }
+}
+
+function lockOwner() {
+  ownerUnlocked = false;
+  sessionStorage.removeItem(OWNER_KEY);
+  $("#owner-panel").classList.remove("open");
+}
+
+function handleOwnerAction(action) {
+  if (action === "clear-all") {
+    if (confirm("Clear ALL bookmarks, history, and data?")) {
+      clearAllData();
+      renderBookmarkBar();
+      alert("All data cleared.");
+    }
+  }
+  if (action === "export-data") {
+    const data = {
+      bookmarks: getBookmarks(),
+      history: getHistory(),
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "ak-browser-export.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+  if (action === "toggle-proxy") {
+    setProxyMode("scramjet");
+    $("#proxy-select").value = "scramjet";
+    alert("Scramjet mode forced on.");
+  }
+  if (action === "new-private") {
+    createTab("ak://home", { isPrivate: true });
+  }
+  if (action === "lock") {
+    lockOwner();
+  }
+}
+
 // Events
 $("#btn-new-tab").addEventListener("click", () => createTab());
 $("#btn-back").addEventListener("click", () => {
@@ -302,9 +372,31 @@ $("#dropdown").addEventListener("click", (e) => {
       renderBookmarkBar();
     }
   }
+  if (action === "owner-access") {
+    if (ownerUnlocked) {
+      $("#owner-panel").classList.add("open");
+    } else {
+      openOwnerModal();
+    }
+  }
 });
 
 $("#panel-close").addEventListener("click", closePanel);
+
+$("#owner-cancel").addEventListener("click", closeOwnerModal);
+$("#owner-submit").addEventListener("click", unlockOwner);
+$("#owner-password").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") unlockOwner();
+});
+$("#owner-modal").addEventListener("click", (e) => {
+  if (e.target === $("#owner-modal")) closeOwnerModal();
+});
+$("#owner-panel-close").addEventListener("click", () => {
+  $("#owner-panel").classList.remove("open");
+});
+$$("[data-owner]").forEach((btn) => {
+  btn.addEventListener("click", () => handleOwnerAction(btn.dataset.owner));
+});
 
 window.addEventListener("message", (e) => {
   if (e.data?.type === "ak-navigate" && e.data.url && activeId) {
@@ -315,3 +407,6 @@ window.addEventListener("message", (e) => {
 // Boot
 renderBookmarkBar();
 createTab();
+if (ownerUnlocked) {
+  // stay locked on panel until they open it again from menu
+}
